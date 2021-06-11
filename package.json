@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.10",
+    "coinbase": "^2.0.8",
+    "node-fetch": "^2.6.1",
+    "request": "^2.88.2"
+  },
+  "name": "CryptoBot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spamin47/CryptoBot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/spamin47/CryptoBot/issues"
+  },
+  "homepage": "https://github.com/spamin47/CryptoBot#readme",
+  "description": ""
+}
