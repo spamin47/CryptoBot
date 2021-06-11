@@ -24,8 +24,9 @@ const request = require('request');
 request('https://www.google.com', (error, response, html) => {
   if (!error && response.statusCode == 200) {
     //console.log(html);
+    const $ = cheerio.load(html);
 
-    const test = $(".L3eUgb");
+    const test = $('.MV3Tnb');
     console.log(test);
   }
 });
