@@ -3,6 +3,7 @@
     "cheerio": "^1.0.0-rc.10",
     "coinbase": "^2.0.8",
     "node-fetch": "^2.6.1",
+    "puppeteer": "^10.0.0",
     "request": "^2.88.2"
   },
   "name": "CryptoBot",

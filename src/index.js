@@ -1,4 +1,6 @@
 var Client = require('coinbase').Client;
+const puppeteer = require('puppeteer');
+
 var client = new Client({
                           'apiKey': 'API KEY',
                           'apiSecret': 'API SECRET',
@@ -18,15 +20,17 @@ client.getSpotPrice({'currencyPair': 'BTC-USD'}, function(err, data) {
 // console.log(test2(15));
 // console.log(test(10));
 
-const cheerio = require('cheerio');
-const request = require('request');
-
-request('https://www.google.com', (error, response, html) => {
-  if (!error && response.statusCode == 200) {
-    //console.log(html);
-    const $ = cheerio.load(html);
-
-    const test = $('.MV3Tnb');
-    console.log(test);
+const scrape = async() => {
+  try{
+    const browser = await puppeteer.launch({headless:true});
+    const page =await browser.newPage();
+    await page.goto('https://www.google.com/');
+    await page.screenshot({path:'1.png'});
+    
+  }catch(error){
+    console.error(error)
   }
-});
+  
+}
+
+scrape();
