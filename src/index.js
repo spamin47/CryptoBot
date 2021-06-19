@@ -45,11 +45,11 @@ const scrape = async() => {
 
   
   logInRobinhood(page2);
-  
-
+  await page2.waitForTimeout(30000);
   // await logPromise1;
+  await page2.waitForSelector('._2SOJcom0wr47t2LX78YQjj');
 
-  await page2.waitForTimeout(2000);
+  buy(page2, 1.50);
   await page.waitForTimeout(1000000);
   switchTab(page);
   await page.waitForTimeout(2000);
@@ -143,19 +143,30 @@ async function logInRobinhood(oldPage){
   await page.waitForTimeout(2000);
 }
 
-async function buy(oldPage){
+async function buy(oldPage, amount){
   const page = oldPage;
+  const thisAmount = amount;
+  //click on "buy tab"
   const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[1]/div/h3/span/div");
   if (button) { 
     await button.click();
   }
+  await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
+  await page.keyboard.type(amount.toString());
+  
 }
-async function sell(oldPage){
+async function sell(oldPage, amount){
   const page = oldPage;
+  const thisAmount = amount;
+  //click on "sell tab"
   const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[2]/div/h3/span/div/span");
   if (button) { 
     await button.click();
   }
+  await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
+  console.log(amount.toString());
+  await page.keyboard.type(amount.toString());
+  
 }
 
 scrape();
