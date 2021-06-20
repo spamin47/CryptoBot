@@ -44,13 +44,14 @@ const scrape = async() => {
   await page2.waitForTimeout(3000);
 
   
-  logInRobinhood(page2);
-  await page2.waitForTimeout(30000);
+  // logInRobinhood(page2);
+  // await page2.waitForTimeout(30000); //enough time to enter in sms verification code
   // await logPromise1;
-  await page2.waitForSelector('._2SOJcom0wr47t2LX78YQjj');
+  // await page2.waitForSelector('._2SOJcom0wr47t2LX78YQjj');
 
-  buy(page2, 1.50);
-  await page.waitForTimeout(1000000);
+  // buy(page2, 1.50);
+  // await page.waitForTimeout(60000);
+  await page.waitForTimeout(3000);
   switchTab(page);
   await page.waitForTimeout(2000);
 
@@ -77,17 +78,19 @@ const scrape = async() => {
 function runBot(oldPage){
     const page = oldPage;
     setInterval(async () => {
-      await page.mouse.move(300,350);
-      const [getXpath] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[10]/div');
-      const value = await page.evaluate(name => name.innerText, getXpath); //buy or sell +1 = buy, -1 = sell
+      await page.mouse.move(300,370);
+      const [buyOrSell_Signal] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[10]/div');
+      const value = await page.evaluate(name => name.innerText, buyOrSell_Signal); //buy or sell +1 = buy, -1 = sell
       console.log("value: " + value);
       if(value == 1){
         // buy(page, value));
       }else if(value == -1){
         // sell(page, value));
+        const [amount] = await page.$x('/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/footer');
+        console.log(Date.getTime());
       }
       
-    }, 15000);
+    }, 1000);
 }
 
 function openRobinhood(oldPage)
@@ -127,13 +130,14 @@ async function logInTradingView(oldPage){
   await page.keyboard.press('Tab'); //goto password
   await page.keyboard.type(password); //enter text
   await page.keyboard.press('Enter');
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(30000);
   await page.goto('https://www.tradingview.com/chart'); //goto chart
 }
 
 async function logInRobinhood(oldPage){
   const page = oldPage;
-  await page.click(".css-1pafvdo-InternalInput");
+  await page.waitForTimeout(1000);
+  await page.click(".css-1pafvdo-InternalInput");//css-1pafvdo-InternalInput
   await page.keyboard.type(r_username);
   await page.keyboard.press('Tab');
   await page.keyboard.type(r_pass);
@@ -152,10 +156,10 @@ async function buy(oldPage, amount){
     await button.click();
   }
   await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
-  await page.keyboard.type(amount.toString());
+  await page.keyboard.type(thisAmount.toString());
   
 }
-async function sell(oldPage, amount){
+async function sell(oldPage){
   const page = oldPage;
   const thisAmount = amount;
   //click on "sell tab"
@@ -164,9 +168,8 @@ async function sell(oldPage, amount){
     await button.click();
   }
   await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
-  console.log(amount.toString());
-  await page.keyboard.type(amount.toString());
-  
+  console.log(thisAmount.toString());
+  await page.keyboard.type(thisAmount.toString());
 }
 
 scrape();
