@@ -1,20 +1,8 @@
 
 require('dotenv').config();
-var Client = require('coinbase').Client;
 const puppeteer = require('puppeteer-extra');
 const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker');
 puppeteer.use(AdblockerPlugin());
-
-
-var client = new Client({
-                          'apiKey': 'API KEY',
-                          'apiSecret': 'API SECRET',
-                          strictSSL: false
-                        });
-
-client.getSpotPrice({'currencyPair': 'BTC-USD'}, function(err, data) {
-  console.log(data);
-});
 
 var r_username = process.env.ROBBINHOOD_USER;
 var r_pass = process.env.ROBBINHOOD_PASS;
@@ -28,6 +16,8 @@ var amountTrading = 10; //amount to trade with
 
 const scrape = async() => {
   //launch browser
+  console.log("Running...");
+  console.log("Launching Browser Instance...");
   const browser = await puppeteer.launch({
       headless: false, // Sets browser visibility 
       //ignoreHTTPSErrors: true,
@@ -36,11 +26,13 @@ const scrape = async() => {
   });
   const page = await browser.newPage();
   //await page2.setViewport({ width: 800, height: 600 })
+  console.log("Opening TradingView Window...");
   await page.goto('https://www.tradingview.com/chart'); //goto url
   await page.waitForTimeout(2000);
   const page2 = await browser.newPage();        // open new tab
   
   //open Robinhood in new tab
+  console.log("Opening RobbinHood Window...");
   openRobinhood(page2);
   await page2.waitForTimeout(3000);
 
@@ -53,12 +45,13 @@ const scrape = async() => {
 
   //login to tradingview and navigate to chart
   // logInTradingView(page);
-
+  console.log("Initializing Algorithm Bot...");
   await page.waitForSelector(".valueValue-2KhwsEwE");
   let element = await page.$('.valueValue-2KhwsEwE');
   let value = await page.evaluate(el => el.textContent, element);
 
   // start of data retrieval
+  console.log("Bot running...");
   const promise = new Promise(() => {
     
     runBot(page);
@@ -88,40 +81,40 @@ function runBot(oldPage){
       var now = new Date();
       var curMin = now.getMinutes();
       var curSec = now.getSeconds();
-      const [buyOrSell_Signal] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[10]/div');
-      const buyOrSell = 
-        String(await page.evaluate(name => name.innerText, buyOrSell_Signal)).length; //buy or sell 1.00 = buy, -1.00 = sell; Buy: 4, Sell: 5;
-      const [atr_take_profit_1x] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[5]/div');
-      const atr_1x = parseFloat(await page.evaluate(name => name.innerText, atr_take_profit_1x));
-      const [atr_take_profit_1dot5x] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[7]/div');
-      const atr_1dot5x = parseFloat(await page.evaluate(name => name.innerText, atr_take_profit_1dot5x));
-      const [atr_take_profit_2x] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[16]/div');
-      const atr_2x = parseFloat(await page.evaluate(name => name.innerText, atr_take_profit_2x));
-      const [closing_price] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[1]/div[1]/div[2]/div/div[5]/div[2]'); //closing price
-      const price = parseFloat(await page.evaluate(name => name.innerText, closing_price));
-      const [dynamic_overbought] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[3]/td[2]/div/div[1]/div/div[2]/div[2]/div[2]/div/div[5]/div');
-      const dynamicOverboughtValue = parseFloat(await page.evaluate(name => name.innerText, dynamic_overbought));
-      const [crsi] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[3]/td[2]/div/div[1]/div/div[2]/div[2]/div[2]/div/div[7]/div');
-      const CRSIValue = parseFloat(await page.evaluate(name => name.innerText, crsi));
-      const static_overbought = 70;
 
-      //compress data in JSON format
-      var data = new Object();
-      data.buyOrSell = buyOrSell;
-      data.price = price;
-      data.atrValue_1x = atr_1x;
-      data.atrValue_1dot5x = atr_1dot5x;
-      data.atrValue_2x = atr_2x;
-      data.dynamicOverboughtValue = dynamicOverboughtValue;
-      data.CRSIValue = CRSIValue;
-      data.minute = curMin;
-      data.sec = curSec;
+      if(curSec == 59){
+        const [buyOrSell_Signal] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[10]/div');
+        const buyOrSell = 
+          String(await page.evaluate(name => name.innerText, buyOrSell_Signal)).length; //buy or sell 1.00 = buy, -1.00 = sell; Buy: 4, Sell: 5;
+        const [atr_take_profit_1x] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[5]/div');
+        const atr_1x = parseFloat(await page.evaluate(name => name.innerText, atr_take_profit_1x));
+        const [atr_take_profit_1dot5x] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[7]/div');
+        const atr_1dot5x = parseFloat(await page.evaluate(name => name.innerText, atr_take_profit_1dot5x));
+        const [atr_take_profit_2x] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[16]/div');
+        const atr_2x = parseFloat(await page.evaluate(name => name.innerText, atr_take_profit_2x));
+        const [closing_price] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[1]/div[1]/div[2]/div/div[5]/div[2]'); //closing price
+        const price = parseFloat(await page.evaluate(name => name.innerText, closing_price));
+        const [dynamic_overbought] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[3]/td[2]/div/div[1]/div/div[2]/div[2]/div[2]/div/div[5]/div');
+        const dynamicOverboughtValue = parseFloat(await page.evaluate(name => name.innerText, dynamic_overbought));
+        const [crsi] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[3]/td[2]/div/div[1]/div/div[2]/div[2]/div[2]/div/div[7]/div');
+        const CRSIValue = parseFloat(await page.evaluate(name => name.innerText, crsi));
+        const static_overbought = 70;
 
-      var dataJSON = JSON.stringify(data);
-      console.log("{data: " + dataJSON + " }");
-      //console.log(String(buyOrSell) +" length: " + String(buyOrSell).length);
-      if(curSec == 0){
-        
+        //compress data in JSON format
+        var data = new Object();
+        data.buyOrSell = buyOrSell;
+        data.price = price;
+        data.atrValue_1x = atr_1x;
+        data.atrValue_1dot5x = atr_1dot5x;
+        data.atrValue_2x = atr_2x;
+        data.dynamicOverboughtValue = dynamicOverboughtValue;
+        data.CRSIValue = CRSIValue;
+        data.minute = curMin;
+        data.sec = curSec;
+
+        var dataJSON = JSON.stringify(data);
+        console.log(`{data: ${dataJSON} }`);
+
         //buy
         if(buyOrSell == 4 && !inTrade){
           //unlocks take profit conditions
@@ -146,17 +139,21 @@ function runBot(oldPage){
         if(inTrade){
           if(buyOrSell == 5 || (CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought && price >= atr_2x)){ //extreme sell signal: sell all
             inTrade = false;
-            console.log("sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            console.log("sell all " + now.getHours() + ":" + curMin + ":" + curSec);
             // sell(page, value));
           }else if(CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought && cRSI_Sell){//very hard sell signal
             cRSI_Sell = false;
+            console.log("csi sell at " + now.getHours() + ":" + curMin + ":" + curSec);
 
           }else if(price >= atr_2x_TP && atr2x_Sell){//hard sell signal
             atr2x_Sell = false;
+            console.log("atr2x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
           }else if(price >= atr_1dot5x_TP && atr1dot5x_Sell){ //medium sell signal
             atr1dot5x_Sell = false;
+            console.log("atr1.5x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
           }else if(price >= atr_1x_TP && atr1x_Sell){ //light sell signal
             atr1x_Sell = false;
+            console.log("atr1x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
           }
         }
       }
