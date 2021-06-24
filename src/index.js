@@ -73,12 +73,27 @@ function runBot(oldPage){
     var atr_1x_TP;
     var atr_1dot5x_TP
     var atr_2x_TP;
+    // price target percentages
+    var atr1x_percent = 0.40;
+    var atr1dot5x_percent = 0.50;
+    var atr2x_percent = 0.70;
+    var CRSI_percent = 0.50;
+    //logger
+    let profitsAndLosses = [];
+    var BTCBuyPrice = 0;
+    var originalRiskedValue = 100;
+    var riskedValue = 100;
+    var sellPrice = 0;
+    var tradeLog = 0;
+    var percentMove = 0;
 
-    setInterval(async () => {
+    var botInterval = setInterval(async () => {
       await page.mouse.move(650, 200);
       
       //collect data
       var now = new Date();
+      var curDay = now.getDay();
+      var curHour = now.getHours();
       var curMin = now.getMinutes();
       var curSec = now.getSeconds();
 
@@ -133,29 +148,59 @@ function runBot(oldPage){
           }
           console.log("buy at " + now.getHours() + ":" + curMin + ":" + curSec);
           // buy(page, value));
+          buyPrice = price;
         }
           
         //sell
         if(inTrade){
+          percentMove = calculatePercentage(buyPrice, price);
+          riskedValue = riskedValue + (riskedValue * percentMove); // gets current value of investment
+
           if(buyOrSell == 5 || (CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought && price >= atr_2x)){ //extreme sell signal: sell all
             inTrade = false;
             console.log("sell all " + now.getHours() + ":" + curMin + ":" + curSec);
+            tradeLog += riskedValue;
+            profitsAndLosses.push(calculatePercentage(originalRiskedValue, tradeLog));
+            riskedValue = originalRiskedValue;
+            tradeLog = 0;
             // sell(page, value));
           }else if(CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought && cRSI_Sell){//very hard sell signal
             cRSI_Sell = false;
             console.log("csi sell at " + now.getHours() + ":" + curMin + ":" + curSec);
-
+            let temp = (riskedValue * CRSI_percent);
+            tradeLog += temp;
+            riskedValue -=  temp;
           }else if(price >= atr_2x_TP && atr2x_Sell){//hard sell signal
             atr2x_Sell = false;
             console.log("atr2x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let temp = (riskedValue * atr2x_percent);
+            tradeLog += temp;
+            riskedValue -=  temp;
           }else if(price >= atr_1dot5x_TP && atr1dot5x_Sell){ //medium sell signal
             atr1dot5x_Sell = false;
             console.log("atr1.5x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let temp = (riskedValue * atr1dot5x_percent);
+            tradeLog += temp;
+            riskedValue -=  temp;
           }else if(price >= atr_1x_TP && atr1x_Sell){ //light sell signal
             atr1x_Sell = false;
             console.log("atr1x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let temp = (riskedValue * atr1x_percent);
+            tradeLog += temp;
+            riskedValue -=  temp;
           }
         }
+
+      }
+
+      if(curDay == 24 && curHour == 18){
+        let total = 0;
+        for(let i = 0; i < profitsAndLosses.length; i++){
+          total += profitsAndLosses[i];
+        }
+        console.log(profitsAndLosses);
+        console.log(total + "%");
+        clearInterval(botInterval);
       }
 
     }, 1000);
@@ -178,6 +223,10 @@ function switchTab(oldPage) {
   (async function () { 
     await page.bringToFront();
   }());
+}
+
+function calculatePercentage(buyPrice, sellPrice){
+  return ((sellPrice - buyPrice) / buyPrice);
 }
 
 // async function logInTradingView(oldPage){
@@ -235,3 +284,26 @@ async function sell(oldPage){
 }
 
 scrape();
+
+
+/**
+ * 100 buy 
+ * 1x atr 50% off the table
+ * 1.5 atr 50%
+ * 2x atr 100%
+ * 
+ * 101(went up 1%) reached 1x price target
+ * var temp += 50.5 
+ * 
+ * 51 (went up 1%) reached 1.5x price target
+ * var temp += 25.5;
+ * 
+ * 25 2x atr (-1.5%) never reached 2x, trigger hard sell
+ * var temp += 25
+ * 
+ * final calculation:
+ * 50.5 + 25.5 + 25 = 105.5
+ * 
+ * original buy price of 100
+ * profitsandlosses += (105.5 - 100) / 100;
+ */
