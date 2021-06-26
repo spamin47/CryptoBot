@@ -80,12 +80,11 @@ function runBot(oldPage){
     var CRSI_percent = 0.50;
     //logger
     let profitsAndLosses = [];
-    var BTCBuyPrice = 0;
     var originalRiskedValue = 100;
     var riskedValue = 100;
-    var sellPrice = 0;
     var tradeLog = 0;
     var percentMove = 0;
+    var buyPrice = 0;
 
     var botInterval = setInterval(async () => {
       await page.mouse.move(650, 200);
@@ -96,6 +95,7 @@ function runBot(oldPage){
       var curHour = now.getHours();
       var curMin = now.getMinutes();
       var curSec = now.getSeconds();
+      //var curMiliSec = now.getMilliseconds();
 
       if(curSec == 59){
         const [buyOrSell_Signal] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[10]/div');
@@ -160,9 +160,12 @@ function runBot(oldPage){
             inTrade = false;
             console.log("sell all " + now.getHours() + ":" + curMin + ":" + curSec);
             tradeLog += riskedValue;
-            profitsAndLosses.push(calculatePercentage(originalRiskedValue, tradeLog));
+            let temp = calculatePercentage(originalRiskedValue, tradeLog);
+            profitsAndLosses.push(temp);
+            console.log(tradeLog);
             riskedValue = originalRiskedValue;
             tradeLog = 0;
+            console.log(`Trade finished on ${curDay}:${curHour}:${curMin}:${curSec}, ${temp * 100}%`);
             // sell(page, value));
           }else if(CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought && cRSI_Sell){//very hard sell signal
             cRSI_Sell = false;
@@ -170,30 +173,34 @@ function runBot(oldPage){
             let temp = (riskedValue * CRSI_percent);
             tradeLog += temp;
             riskedValue -=  temp;
+            buyPrice = price;
           }else if(price >= atr_2x_TP && atr2x_Sell){//hard sell signal
             atr2x_Sell = false;
             console.log("atr2x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
             let temp = (riskedValue * atr2x_percent);
             tradeLog += temp;
             riskedValue -=  temp;
+            buyPrice = price;
           }else if(price >= atr_1dot5x_TP && atr1dot5x_Sell){ //medium sell signal
             atr1dot5x_Sell = false;
             console.log("atr1.5x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
             let temp = (riskedValue * atr1dot5x_percent);
             tradeLog += temp;
             riskedValue -=  temp;
+            buyPrice = price;
           }else if(price >= atr_1x_TP && atr1x_Sell){ //light sell signal
             atr1x_Sell = false;
             console.log("atr1x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
             let temp = (riskedValue * atr1x_percent);
             tradeLog += temp;
             riskedValue -=  temp;
+            buyPrice = price;
           }
         }
 
       }
 
-      if(curDay == 24 && curHour == 18){
+      if(curDay == 25 && curHour == 18){
         let total = 0;
         for(let i = 0; i < profitsAndLosses.length; i++){
           total += profitsAndLosses[i];
@@ -262,25 +269,46 @@ async function buy(oldPage, amount){
   const page = oldPage;
   const thisAmount = amount;
   //click on "buy tab"
+  await page.waitForTimeout(500);
   const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[1]/div/h3/span/div");
   if (button) { 
     await button.click();
   }
   await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
   await page.keyboard.type(thisAmount.toString());
-  
+  await page.waitForTimeout(500);
+  await page.click('.css-1o0fjrg'); //review order
+  await page.click('.css-1o0fjrg'); //buy
+  await page.waitForTimeout(2000);
+  await page.click('.css-1o0fjrg'); //done
+  await page.waitForTimeout(1000);
+  await page.click('.css-1o0fjrg');
+  await page.waitForTimeout(500);
+  // await page.keyboard.type(r_pass);//verify
+  // await page.waitForTimeout(500);
+  // await page.keyboard.press('Enter');
 }
-async function sell(oldPage){
+async function sell(oldPage,amount){
   const page = oldPage;
   const thisAmount = amount;
   //click on "sell tab"
+  await page.waitForTimeout(500);
   const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[2]/div/h3/span/div/span");
   if (button) { 
     await button.click();
   }
+  //const [atr_take_profit_1x] = await page.$x(
   await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
   console.log(thisAmount.toString());
   await page.keyboard.type(thisAmount.toString());
+  await page.waitForTimeout(500);
+  await page.click('.css-1o0fjrg'); //review order
+  await page.click('.css-1o0fjrg'); //sell
+  await page.waitForTimeout(2000);
+  await page.click('.css-1o0fjrg'); //done
+  await page.waitForTimeout(1000);
+  await page.click('.css-1o0fjrg');
+  await page.waitForTimeout(500);
 }
 
 scrape();
