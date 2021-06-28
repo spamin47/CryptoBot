@@ -10,7 +10,7 @@ var r_pass = process.env.ROBBINHOOD_PASS;
 var username = process.env.TRADINGVIEW_USER;
 var password = process.env.TRADINGVIEW_PASS;
 
-var wallet = 10; //cash
+var wallet = 10.00; //cash in USD
 var amountTrading = 10; //amount to trade with
 
 
@@ -34,15 +34,14 @@ const scrape = async() => {
   //open Robinhood in new tab
   console.log("Opening RobbinHood Window...");
   openRobinhood(page2);
-  await page2.waitForTimeout(2000);
-  // sell(page2,0.50);
 
+  await page2.waitForTimeout(2000);
   // logInRobinhood(page2);
-  //await page2.waitForTimeout(30000); //enough time to enter in sms verification code
+  // await page2.waitForTimeout(30000); //enough time to enter in sms verification code
   switchTab(page);
 
   //login to tradingview and navigate to chart
-  // logInTradingew(page);Vi
+  // logInTradingew(page);
   console.log("Initializing Algorithm Bot...");
   await page.waitForSelector(".valueValue-2KhwsEwE");
   let element = await page.$('.valueValue-2KhwsEwE');
@@ -52,15 +51,17 @@ const scrape = async() => {
   console.log("Bot running...");
   const promise = new Promise(() => {
     
-    runBot(page);
+    runBot(page, page2);
     
   });
   await promise;
   await browser.close();
 }
 
-function runBot(oldPage){
-    const page = oldPage;
+function runBot(chartPage, brokerPage){
+    const page = chartPage;
+    const page2 = brokerPage;
+    
     //locks
     var inTrade = false;
     var inTrade_ATR = false;
@@ -75,13 +76,13 @@ function runBot(oldPage){
     // price target percentages
     var atr1x_percent = 0.40;
     var atr1dot5x_percent = 0.50;
-    var atr2x_percent = 0.70;
-    var CRSI_percent = 0.50;
+    var atr2x_percent = 0.60;
+    var CRSI_percent = 0.70;
   
 
     var botInterval = setInterval(async () => {
       await page.mouse.move(650, 200);
-      
+
       //collect data
       var now = new Date();
       var curDay = now.getDay();
@@ -92,7 +93,7 @@ function runBot(oldPage){
       var buyPrice = 0;
 
       if(curSec == 59){
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(700);
         const [buyOrSell_Signal] = await page.$x('/html/body/div[2]/div[1]/div[2]/div[1]/div/table/tr[1]/td[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div[10]/div');
         const buyOrSell = 
           String(await page.evaluate(name => name.innerText, buyOrSell_Signal)).length; //buy or sell 1.00 = buy, -1.00 = sell; Buy: 4, Sell: 5;
@@ -133,6 +134,7 @@ function runBot(oldPage){
 
         //buy
         if(buyOrSell == 4 && !inTrade && !inTrade_ATR){ //if not any trade and given buy signal, buy
+          switchTab(page2);
           //unlocks take profit conditions
           inTrade = true;
           cRSI_Sell = true;
@@ -147,6 +149,7 @@ function runBot(oldPage){
 
           //Overbought ATR trade: take profit as soon as possible
           if(price >= riskATR_Top_Value){
+            console.log("Entering high risk trade (above ATR)...");
             inTrade = false;
             inTrade_ATR = true;
           }
@@ -156,51 +159,68 @@ function runBot(oldPage){
           }
           console.log("buy at " + now.getHours() + ":" + curMin + ":" + curSec);
           buyPrice = price;
-          // buy(page, value));
+          let buyingBoi = await buy(page2, 1);
+          console.log(`Bought: ${buyingBoi}`);
+          switchTab(page);
         }
           
         //sell
         if(inTrade){
-
+          switchTab(page2);
           let crsiSellSignal = (CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought);
 
           if(buyOrSell == 5 || 
             (crsiSellSignal && price >= atr_2x_TP) ||price <= riskATR_Bottom_Value){ //extreme sell signal: sell all
             inTrade = false;
             console.log("sell all " + now.getHours() + ":" + curMin + ":" + curSec);
-            // sell(page, value));
+            let sellingBoi = await sell(page2, 1);
+            console.log(`Sold: ${sellingBoi}`);
           }else if(crsiSellSignal && cRSI_Sell){//very hard sell signal
             cRSI_Sell = false;
             console.log("cRSI sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let sellingBoi = await sell(page2, CRSI_percent);
+            console.log(`Sold: ${sellingBoi}`);
           }else if(price >= atr_2x_TP && atr2x_Sell){//hard sell signal
             atr2x_Sell = false;
             console.log("atr2x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let sellingBoi = await sell(page2, atr2x_percent);
+            console.log(`Sold: ${sellingBoi}`);
           }else if(price >= atr_1dot5x_TP && atr1dot5x_Sell){ //medium sell signal
             atr1dot5x_Sell = false;
             console.log("atr1.5x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let sellingBoi = await sell(page2, atr1dot5x_percent);
+            console.log(`Sold: ${sellingBoi}`);
           }else if(price >= atr_1x_TP && atr1x_Sell){ //light sell signal
             atr1x_Sell = false;
             console.log("atr1x sell at " + now.getHours() + ":" + curMin + ":" + curSec);
+            let sellingBoi = await sell(page2,atr1x_percent);
+            console.log(`Sold: ${sellingBoi}`);
           }
+          switchTab(page);
         }
 
         if(inTrade_ATR){
+          switchTab(page2);
           let crsiSellSignal = (CRSIValue >= dynamicOverboughtValue && CRSIValue >= static_overbought);
           if(price > buyPrice){
             inTrade_ATR = false;
             inTrade = false;
+            console.log("sell all " + now.getHours() + ":" + curMin + ":" + curSec);
+            let sellingBoi = await sell(page2,1);
+            console.log(`Sold: ${sellingBoi}`);
           }else if(buyOrSell == 5 || 
             (crsiSellSignal && price >= atr_2x_TP) ||price <= riskATR_Bottom_Value){ //extreme sell signal: sell all
             inTrade_ATR = false;
             inTrade = false;
             console.log("sell all " + now.getHours() + ":" + curMin + ":" + curSec);
-            // sell(page, value));
+            let sellingBoi = await sell(page2,1);
+            console.log(`Sold: ${sellingBoi}`);
           }
+          switchTab(page);
         }
 
       }
 
-   
       //   clearInterval(botInterval);
 
     }, 1000);
@@ -228,19 +248,21 @@ function switchTab(oldPage) {
 async function buy(oldPage, multiplier){
   if(multiplier <= 1){
     const page = oldPage;
-    const thisAmount = amount;
+    const thisAmount = wallet * multiplier;
+    console.log("buying: " + thisAmount);
     //click on "buy tab"
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(2000);
     const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[1]/div/h3/span/div");
     if (button) { 
       await button.click();
     }
-    await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
+    await page.waitForTimeout(2000);
+    await page.click('._2SOJcom0wr47t2LX78YQjj');//q9sjVKdRjdz3ZNAJdN0uj text box with price
     await page.keyboard.type(thisAmount.toString());
     await page.waitForTimeout(500);
     await page.click('.css-1o0fjrg'); //review order
     await page.click('.css-1o0fjrg'); //buy
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
     await page.click('.css-1o0fjrg'); //done
     await page.waitForTimeout(1000);
     await page.click('.css-1o0fjrg');
@@ -248,41 +270,57 @@ async function buy(oldPage, multiplier){
     // await page.keyboard.type(r_pass);//verify
     // await page.waitForTimeout(500);
     // await page.keyboard.press('Enter');
+    await page.reload({ waitUntil: ["networkidle0", "domcontentloaded"] }); //reload page
+    wallet -= thisAmount; //subtract how much was bought
+    return true;
+    console.log("End of buy function.");
   }
+  return false;
 }
 
 async function sell(oldPage, percentage){
   const page = oldPage;
-  const multiplier = percentage;
-  await page.waitForTimeout(1000);
-  //click on "sell tab"
-  await page.waitForTimeout(500);
-  const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[2]/div/h3/span/div/span");
-  if (button) { 
-    await button.click();
+  if(percentage <= 1){
+    const multiplier = percentage;
+    await page.waitForTimeout(1000);
+    //click on "sell tab"
+    await page.waitForTimeout(500);
+    const [button] = await page.$x("/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/header/div/div[1]/div/div[2]/div/h3/span/div/span");
+    if (button) { 
+      await button.click();
+    }
+    //grab amount available to sell
+    const [amount] = await page.$x('/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/footer');
+    const amountAvailable_Str = await page.evaluate(name => name.innerText, amount);
+    let amountAvailable = parseFloat(amountAvailable_Str.substring(1));
+    if(amountAvailable < 100){ //in case there's an error
+    amountAvailable *= multiplier;
+    console.log("selling: " + amountAvailable);
+    await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj text box 
+    await page.keyboard.type(amountAvailable.toString());
+    await page.waitForTimeout(1000);
+    await page.click('.css-1o0fjrg'); //review order
+    await page.waitForTimeout(500);
+    await page.click('.css-1o0fjrg'); //sell
+    await page.waitForSelector('.css-1o0fjrg');
+    await page.click('.css-1o0fjrg');
+    await page.waitForTimeout(2000);
+    wallet += Math.floor(amountAvailable*100) * 0.01; // sets new wallet value
+    console.log("Wallet amount: " + wallet);
+    await page.waitForTimeout(2000);
+    await page.click('.css-1o0fjrg'); //done
+    await page.waitForTimeout(1000);
+    await page.click('.css-1o0fjrg');
+    await page.waitForTimeout(500);
+    return true;
+    console.log("End of sell function.");
+    }
+    return false;
   }
-  //grab amount available to sell
-  const [amount] = await page.$x('/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/form/div[1]/footer');
-  const amountAvailable_Str = await page.evaluate(name => name.innerText, amount);
-  let amountAvailable = parseFloat(amountAvailable_Str.substring(1));
-  amountAvailable *= multiplier;
-  console.log("selling: " + amountAvailable);
-  await page.click('._2SOJcom0wr47t2LX78YQjj');//_2SOJcom0wr47t2LX78YQjj
-  //console.log(thisAmount.toString());
-  await page.keyboard.type(amountAvailable.toString());
-  await page.waitForTimeout(500);
-  await page.click('.css-1o0fjrg'); //review order
-  await page.click('.css-1o0fjrg'); //sell
-  await page.waitForTimeout(2000);
-  await page.click('.css-1o0fjrg'); //done
-  await page.waitForTimeout(1000);
-  await page.click('.css-1o0fjrg');
-  await page.waitForTimeout(500);
+  return false;
   // await page.keyboard.type(r_pass);//verify
   // await page.waitForTimeout(500);
   // await page.keyboard.press('Enter');
-  wallet += amountAvailable; //not 100% accurate
-  console.log("Wallet amount: " + wallet);
 }
 
 scrape();
@@ -338,3 +376,8 @@ scrape();
 //   await page.goto("https://robinhood.com/crypto/BTC");
 //   await page.waitForTimeout(2000);
 // }
+
+// const [walletValue] = await page.$x('/html/body/div[1]/main/div[3]/div/div/div/div/div/div/div/div[2]/div/div[1]/div[2]/div/div/div[2]/div[2]/div[2]/span');
+// const value = await page.evaluate(el => el.innerText, walletValue);
+// console.log(`Sold: ${value}`);
+// wallet += parseFloat(value.substring(1)); // sets new wallet value
